@@ -2,6 +2,7 @@ const socket = io()
 let name;
 let textarea = document.querySelector('#textarea')
 let messageArea = document.querySelector('.message__area')
+const languageSelect = document.getElementById('language');
 do {
     name = prompt('Please enter your name: ')
 } while(!name)
@@ -10,17 +11,19 @@ textarea.addEventListener('keyup', (e) => {
     if(e.key === 'Enter') {
         sendMessage(e.target.value)
     }
-})
+});
 
 function sendMessage(message) {
+    let lang = languageSelect.value;
     let msg = {
         user: name,
-        message: message.trim()
+        message: message.trim(),
+        lang: lang
     }
     // Append 
     appendMessage(msg, 'outgoing')
-    textarea.value = ''
-    scrollToBottom()
+    textarea.value = '';
+    scrollToBottom();
 
     // Send to server 
     socket.emit('message', msg)
