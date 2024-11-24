@@ -1,26 +1,45 @@
-const express = require('express')
-const app = express()
-const http = require('http').createServer(app)
-
-const PORT = process.env.PORT || 3000
-
-http.listen(PORT, () => {
-    console.log(`Listening on port ${PORT}`)
-})
-
-app.use(express.static(__dirname + '/public'))
+app.use(express.static(__dirname + '/public'));
 
 app.get('/', (req, res) => {
-    res.sendFile(__dirname + '/index.html')
-})
+    res.sendFile(__dirname + '/index.html');
+});
 
-// Socket 
-const io = require('socket.io')(http)
-
+// Socket.io connection
 io.on('connection', (socket) => {
-    console.log('Connected...')
-    socket.on('message', (msg) => {
-        socket.broadcast.emit('message', msg)
-    })
+    console.log('A user connected');
 
-})
+    socket.on('message', async (msg) => {
+        const { message, lang, user } = msg;
+
+        try {
+            // Translate message
+            const response = await axios.get('https://api.mymemory.translated.net/get', {
+                params: {
+                    q: message, // Text to translate
+                    langpair: `en|${lang}` // From English to the selected language
+                }
+            });
+
+            const translatedText = response.data.responseData.translatedText;
+
+            // Construct the translated message
+            const translatedMsg = {
+                user,
+                message: translatedText, // Translated text
+                original: message        // Original text (optional, for reference)
+            };
+
+            // Broadcast the translated message to all clients
+            socket.broadcast.emit('message', translatedMsg);
+        } catch (error) {
+            console.error('Translation error:', error.message);
+
+            // Handle the error gracefully (optional feedback to sender)
+            socket.emit('error', { message: 'Translation failed' });
+        }
+    });
+
+    socket.on('disconnect', () => {
+        console.log('A user disconnected');
+    });
+});
